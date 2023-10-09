@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heart-deployment
+spec:
+  selector:
+    matchLabels:
+      app: heart-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: heart-server
+    spec:
+      containers:
+      - name: heart-container
+        #image: gcr.io/tensorflow-serving/resnet
+        image: docker.io/bobydeveloper/fastapiml:latest  
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: heart-service
+  name: heart-service
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: heart-server
+  type: LoadBalancer
