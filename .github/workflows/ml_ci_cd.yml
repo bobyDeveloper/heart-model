@@ -2,15 +2,16 @@ name: Modelops deploy
 
 on:
   push:
-    branches: [master]
+    branches: [ master ]
   pull_request:
-    branches: [master]
+    branches: [ master ]
   repository_dispatch:
     types: [ml_ci_cd]
 
 jobs:
   ml_ci_cd:
     runs-on: ubuntu-latest
+    
     steps:
     - uses: actions/checkout@v2
 
@@ -20,16 +21,17 @@ jobs:
     - name: pip install
       run: pip install -r requirements.txt
 
-    - name: train model
-      run: python model/train.py
-
+    # Descargar el dataset antes de entrenar el modelo
     - name: download dataset
       run: |
         mkdir -p data
-        wget -O data/heart_disease.csv "${{github.event.client_payload.dataseturl}}"
+        wget -O data/heart_disease.csv ${{github.event.client_payload.dataseturl}}
 
     - name: cat dataset
       run: cat data/heart_disease.csv
+
+    - name: train model
+      run: python model/train.py
 
     - name: docker build
       run: docker build -t ${{secrets.DOCKER_USER}}/${{secrets.MODEL_NAME}}:${{github.sha}} .
@@ -38,27 +40,26 @@ jobs:
       env:
         DOCKER_USER: ${{secrets.DOCKER_USER}}
         DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
-      run: |
-        docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+      run: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD 
 
     - name: docker Push
-      run: docker push ${{secrets.DOCKER_USER}}/${{secrets.MODEL_NAME}}:${{github.sha}}
-
-    - name: update docker user in k8
+      run: docker push ${{secrets.DOCKER_USER}}/${{secrets.MODEL_NAME}}:${{ github.sha }}
+      
+    - name: update docker user in k8 
       run: sed -i 's/{docker_user}/${{secrets.DOCKER_USER}}/g' manifests/k8s.yaml
 
-    - name: update model name in k8
+    - name: update model name in k8 
       run: sed -i 's/{model_name}/${{secrets.MODEL_NAME}}/g' manifests/k8s.yaml
 
-    - name: update _ by -
+    - name: update _ by - 
       run: sed -i 's/_/-/g' manifests/k8s.yaml
 
     - name: update sha in k8
       run: sed -i 's/{github.sha}/${{github.sha}}/g' manifests/k8s.yaml
 
-    - name: ls -la
+    - name: ls -la 
       run: cat manifests/k8s.yaml
-
+      
     - uses: okteto/context@2.7.0
       with:
         token: ${{secrets.OKTETO_TOKEN }}
@@ -70,7 +71,7 @@ jobs:
       with:
         namespace: ${{secrets.OKTETO_NAMESPACE }}
         manifest: manifests/k8s.yaml
-        tag: ${{secrets.DOCKER_USERNAME}}/${{secrets.MODEL_NAME}}:${{github.sha}}
+        tag: ${{ secrets.DOCKER_USERNAME }}/${{secrets.MODEL_NAME}}:${{github.sha}}
 
 
 
